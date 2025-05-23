@@ -1,7 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"idm/inner"
+)
 
 func main() {
 	fmt.Print("Hello Go")
+	fmt.Print(inner.RandomInt(5))
 }
