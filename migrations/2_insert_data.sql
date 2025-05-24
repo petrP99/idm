@@ -8,14 +8,14 @@ VALUES ('Администратор'),
        ('Дизайнер');
 
 INSERT INTO employee (name, role_id)
-VALUES ('Иванов Петр', 1),
-       ('Сидорова Анна', 2),
-       ('Петров Алексей', 3),
-       ('Козлова Елена', 3),
-       ('Смирнов Дмитрий', 4),
-       ('Федорова Ольга', 5),
-       ('Николаев Игорь', 2),
-       ('Васильева Мария', 3);
+VALUES ('Иванов Петр', (select id from role where name = 'Администратор')),
+       ('Сидорова Анна', (select id from role where name = 'Менеджер')),
+       ('Петров Алексей', (select id from role where name = 'Разработчик')),
+       ('Козлова Елена', (select id from role where name = 'Разработчик')),
+       ('Смирнов Дмитрий', (select id from role where name = 'Тестировщик')),
+       ('Федорова Ольга', (select id from role where name = 'Дизайнер')),
+       ('Николаев Игорь', (select id from role where name = 'Менеджер')),
+       ('Васильева Мария', (select id from role where name = 'Разработчик'));
 -- +goose StatementEnd
 
 

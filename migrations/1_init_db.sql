@@ -21,6 +21,6 @@ CREATE TABLE IF NOT EXISTS employee
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE role;
 DROP TABLE employee;
+DROP TABLE role;
 -- +goose StatementEnd
