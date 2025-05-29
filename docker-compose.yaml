@@ -20,3 +20,13 @@ services:
       - export:/export
     networks:
       - idm_network
+
+  postgres-test:
+    image: docker.io/postgres:17-alpine
+    container_name: postgres-test
+    hostname: postgres-db
+    ports:
+      - 127.0.0.1:5433:5432
+    environment:
+      POSTGRES_DB: test_db
+      POSTGRES_PASSWORD: postgres

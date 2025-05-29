@@ -1,6 +1,7 @@
 package role
 
 import (
+	"fmt"
 	"github.com/jmoiron/sqlx"
 	"time"
 )
@@ -40,7 +41,12 @@ func (repo *RoleRepository) FindAllByIds(ids []int64) (listEntity []RoleEntity, 
 	if len(ids) == 0 {
 		return []RoleEntity{}, nil
 	}
-	err = repo.db.Select(&listEntity, "select * from role where id in (?)", ids)
+	query, args, err := sqlx.In("SELECT * FROM role WHERE id IN (?)", ids)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build IN query: %w", err)
+	}
+	query = repo.db.Rebind(query)
+	err = repo.db.Select(&listEntity, query, args...)
 	return listEntity, err
 }
 
@@ -53,6 +59,11 @@ func (repo *RoleRepository) DeleteAllByIds(ids []int64) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	_, err := repo.db.Exec("delete from role where id in (?)", ids)
+	query, args, err := sqlx.In("DELETE  FROM role  WHERE ID IN (?)", ids)
+	if err != nil {
+		return fmt.Errorf("failed to build IN query: %w", err)
+	}
+	query = repo.db.Rebind(query)
+	_, err = repo.db.Exec(query, args...)
 	return err
 }
