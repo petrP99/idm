@@ -12,8 +12,8 @@ import (
 
 type Fixture struct {
 	DB            *sqlx.DB
-	EmployeesRepo *employee.EmployeeRepository
-	RoleRepo      *role.RoleRepository
+	EmployeesRepo *employee.Repository
+	RoleRepo      *role.Repository
 }
 
 func NewFixture() *Fixture {

@@ -11,7 +11,7 @@ func TestRepositoryEmployee(t *testing.T) {
 	t.Run("save employee", func(t *testing.T) {
 		fixture := NewFixture()
 
-		entity := employee.EmployeeEntity{Name: "Test user"}
+		entity := employee.Entity{Name: "Test user"}
 		id, err := fixture.EmployeesRepo.Save(entity, "Разработчик")
 		result, _ := fixture.EmployeesRepo.FindById(id)
 

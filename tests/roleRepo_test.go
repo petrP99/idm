@@ -11,7 +11,7 @@ func TestRepositoryRole(t *testing.T) {
 	t.Run("save role", func(t *testing.T) {
 		fixture := NewFixture()
 
-		entity := role.RoleEntity{Name: "Директор"}
+		entity := role.Entity{Name: "Директор"}
 		id, err := fixture.RoleRepo.Save(entity)
 		result, _ := fixture.RoleRepo.FindById(id)
 
