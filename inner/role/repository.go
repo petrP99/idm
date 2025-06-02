@@ -3,18 +3,10 @@ package role
 import (
 	"fmt"
 	"github.com/jmoiron/sqlx"
-	"time"
 )
 
 type Repository struct {
 	db *sqlx.DB
-}
-
-type Entity struct {
-	Id        int64     `db:"id"`
-	Name      string    `db:"name"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
 }
 
 func NewRoleRepository(dataBase *sqlx.DB) *Repository {
