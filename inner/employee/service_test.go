@@ -3,13 +3,22 @@ package employee
 import (
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert" // импортируем библиотеку с ассерт-функциями
-	"github.com/stretchr/testify/mock"   // импортируем пакет для создания моков
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
 )
 
 var valueId = int64(1)
+
+type stubRepository struct {
+	entities []Entity
+	err      error
+}
+
+func (r *stubRepository) FindAllByIds([]int64) ([]Entity, error) {
+	return r.entities, r.err
+}
 
 type MockRepo struct {
 	mock.Mock
@@ -43,6 +52,48 @@ func (m *MockRepo) Delete(id int64) error {
 func (m *MockRepo) DeleteAllByIds(ids []int64) error {
 	args := m.Called(ids)
 	return args.Error(0)
+}
+
+func Test_FindAllByIds(t *testing.T) {
+	t.Run("success with stub", func(t *testing.T) {
+		// Подготовка данных
+		stub := &stubRepository{
+			entities: []Entity{
+				{
+					Name: "Alice",
+				},
+				{
+					Name: "Bob",
+				},
+			},
+			err: nil,
+		}
+		service := &ServiceStub{repo: stub}
+
+		ids := []int64{1, 2}
+		result, err := service.repo.FindAllByIds(ids)
+
+		assert.NoError(t, err)
+		assert.Len(t, result, 2)
+		assert.Equal(t, "Alice", result[0].Name)
+		assert.Equal(t, "Bob", result[1].Name)
+	})
+
+	t.Run("error with stub", func(t *testing.T) {
+		var err = errors.New("users not found")
+		ids := []int64{1, 2}
+		var want = fmt.Errorf("error finding employees by ids: %d, %w", ids, err)
+		stub := &stubRepository{
+			entities: nil,
+			err:      want,
+		}
+
+		service := &ServiceStub{repo: stub}
+		_, expectedErr := service.repo.FindAllByIds(ids)
+
+		assert.Error(t, expectedErr)
+		assert.Equal(t, want, expectedErr)
+	})
 }
 
 func TestServices(t *testing.T) {

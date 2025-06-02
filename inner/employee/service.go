@@ -8,10 +8,18 @@ type Service struct {
 	repo Repo
 }
 
+type ServiceStub struct {
+	repo StubRepo
+}
+
 func NewService(repo Repo) *Service {
 	return &Service{
 		repo: repo,
 	}
+}
+
+type StubRepo interface {
+	FindAllByIds(ids []int64) ([]Entity, error)
 }
 
 type Repo interface {
