@@ -58,3 +58,25 @@ func (repo *Repository) DeleteAllByIds(ids []int64) error {
 	_, err = repo.db.Exec(query, args...)
 	return err
 }
+
+func (repo *Repository) BeginTransaction() (tx *sqlx.Tx, err error) {
+	return repo.db.Beginx()
+}
+
+func (repo *Repository) FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error) {
+	err = tx.Get(
+		&isExists,
+		"select exists(select 1 from role where name = $1)",
+		name,
+	)
+	return isExists, err
+}
+
+func (repo *Repository) SaveTx(tx *sqlx.Tx, role Entity) (roleId int64, err error) {
+	err = tx.Get(
+		&roleId,
+		"insert into role (name) values ($1) returning id",
+		role.Name,
+	)
+	return roleId, err
+}

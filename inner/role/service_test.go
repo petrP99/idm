@@ -3,6 +3,8 @@ package role
 import (
 	"errors"
 	"fmt"
+	"github.com/78bits/go-sqlmock-sqlx"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"testing"
@@ -45,10 +47,155 @@ func (m *MockRepo) DeleteAllByIds(ids []int64) error {
 	return args.Error(0)
 }
 
+func (m *MockRepo) BeginTransaction() (*sqlx.Tx, error) {
+	args := m.Called()
+	return args.Get(0).(*sqlx.Tx), args.Error(1)
+}
+
+func (m *MockRepo) FindByNameTx(tx *sqlx.Tx, name string) (bool, error) {
+	args := m.Called(tx, name)
+	return args.Get(0).(bool), args.Error(1)
+}
+
+func (m *MockRepo) SaveTx(tx *sqlx.Tx, entity Entity) (int64, error) {
+	args := m.Called(tx, entity)
+	return args.Get(0).(int64), args.Error(1)
+}
+
+func TestServiceSaveTxSuccess(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close database: %v", err)
+		}
+	}()
+
+	sqlxDB := sqlx.NewDb(db, "postgres")
+	mock.ExpectBegin()
+
+	rows := sqlmock.NewRows([]string{"exists"}).AddRow(false)
+	mock.ExpectQuery("select exists(select 1 from role where name = $1)").
+		WithArgs("test").
+		WillReturnRows(rows)
+
+	insertRows := sqlmock.NewRows([]string{"id"}).AddRow(1)
+	mock.ExpectQuery("insert into role (name) values ($1) returning id").
+		WithArgs("test").
+		WillReturnRows(insertRows)
+
+	repo := &Repository{db: sqlxDB}
+	service := NewService(repo)
+
+	id, err := service.SaveTx("test")
+	mock.ExpectCommit()
+
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1), id)
+}
+
+func TestServiceSaveTxBeginTxError(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatal("failed to create mock database")
+	}
+	defer func() { _ = db.Close() }()
+	sqlxDB := sqlx.NewDb(db, "postgres")
+
+	repo := &Repository{db: sqlxDB}
+	service := NewService(repo)
+
+	mock.ExpectBegin().WillReturnError(fmt.Errorf("tx begin error"))
+
+	id, err := service.SaveTx("test")
+	assert.Error(t, err)
+	assert.Zero(t, id)
+	assert.Contains(t, err.Error(), "error creating transaction")
+}
+
+func TestServiceSaveTxFindByNameError(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatal("failed to create mock database")
+	}
+	defer func() { _ = db.Close() }()
+	sqlxDB := sqlx.NewDb(db, "postgres")
+
+	repo := &Repository{db: sqlxDB}
+	service := NewService(repo)
+
+	mock.ExpectBegin()
+
+	mock.ExpectQuery("select exists(select 1 from role where name = $1)").
+		WithArgs("test").
+		WillReturnError(fmt.Errorf("find by name error"))
+
+	mock.ExpectRollback()
+
+	id, err := service.SaveTx("test")
+	assert.Error(t, err)
+	assert.Zero(t, id)
+	assert.Contains(t, err.Error(), "error finding role by name")
+}
+
+func TestServiceSaveTxroleAlreadyExists(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatal("failed to create mock database")
+	}
+	defer func() { _ = db.Close() }()
+	sqlxDB := sqlx.NewDb(db, "postgres")
+
+	repo := &Repository{db: sqlxDB}
+	service := NewService(repo)
+
+	mock.ExpectBegin()
+
+	mock.ExpectQuery("select exists(select 1 from role where name = $1)").
+		WithArgs("test").
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+
+	mock.ExpectRollback()
+
+	id, err := service.SaveTx("test")
+	assert.Error(t, err)
+	assert.Zero(t, id)
+	assert.Contains(t, err.Error(), "already exists")
+}
+
+func TestServiceSaveTxSaveError(t *testing.T) {
+	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	if err != nil {
+		t.Fatal("failed to create mock database")
+	}
+	defer func() { _ = db.Close() }()
+	sqlxDB := sqlx.NewDb(db, "postgres")
+
+	repo := &Repository{db: sqlxDB}
+	service := NewService(repo)
+
+	mock.ExpectBegin()
+
+	mock.ExpectQuery("select exists(select 1 from role where name = $1)").
+		WithArgs("test").
+		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+
+	mock.ExpectQuery("insert into role (name) values ($1) returning id").
+		WithArgs("test").
+		WillReturnError(fmt.Errorf("save error"))
+
+	mock.ExpectRollback()
+
+	id, err := service.SaveTx("test")
+	assert.Error(t, err)
+	assert.Zero(t, id)
+	assert.Contains(t, err.Error(), "error creating role")
+}
+
 func TestServices(t *testing.T) {
-
 	var a = assert.New(t)
-
 	t.Run("should return found role by id", func(t *testing.T) {
 		var repo = new(MockRepo)
 		var svc = NewService(repo)
