@@ -2,6 +2,7 @@ package employee
 
 import (
 	"fmt"
+	"github.com/jmoiron/sqlx"
 )
 
 type Service struct {
@@ -29,6 +30,9 @@ type Repo interface {
 	Save(entity Entity, roleName string) (id int64, err error)
 	Delete(id int64) error
 	DeleteAllByIds(ids []int64) error
+	BeginTransaction() (tx *sqlx.Tx, err error)
+	FindByNameTx(tx *sqlx.Tx, name string) (isExists bool, err error)
+	SaveTx(tx *sqlx.Tx, employee Entity) (employeeId int64, err error)
 }
 
 func (service *Service) FindById(id int64) (Response, error) {
@@ -83,4 +87,36 @@ func (service *Service) DeleteAllByIds(ids []int64) error {
 	}
 
 	return nil
+}
+
+func (service *Service) SaveTx(name string) (int64, error) {
+	tx, err := service.repo.BeginTransaction()
+	defer func() {
+		if tx != nil {
+			if err != nil {
+				_ = tx.Rollback()
+			} else {
+				_ = tx.Commit()
+			}
+		}
+	}()
+	if err != nil {
+		return 0, fmt.Errorf("error save employee: error creating transaction: %w", err)
+	}
+	isExist, err := service.repo.FindByNameTx(tx, name)
+	if err != nil {
+		return 0, fmt.Errorf("error finding employee by name: %s, %w", name, err)
+	}
+	if isExist {
+		return 0, fmt.Errorf("employee with name %s already exists", name)
+	}
+	entity := Entity{
+		Name: name,
+	}
+
+	newEmployeeId, err := service.repo.SaveTx(tx, entity)
+	if err != nil {
+		err = fmt.Errorf("error creating employee with name: %s %v", name, err)
+	}
+	return newEmployeeId, err
 }
