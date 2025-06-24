@@ -30,15 +30,17 @@ func toSliceResponse(e []Entity) []Response {
 type Response struct {
 	Id        int64     `*json:"id"`
 	Name      string    `*json:"name"`
-	RoleID    *int64    `*json:"role_id"`
+	RoleId    *int64    `*json:"role_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type CreateRequest struct {
-	Name string `json:"name" validate:"required,min=2,max=155"`
+	Name   string `json:"name" validate:"required,min=2,max=155"`
+	RoleId *int64 `json:"roleId" validate:"required,min=1,max=155"`
 }
 
 func (req *CreateRequest) ToEntity() Entity {
-	return Entity{Name: req.Name}
+	return Entity{Name: req.Name,
+		RoleID: req.RoleId}
 }
