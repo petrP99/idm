@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"idm/inner/validator"
 	"testing"
 	"time"
 )
@@ -96,7 +97,8 @@ func TestServiceSaveTxSuccess(t *testing.T) {
 		WillReturnRows(insertRows)
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	v := validator.New()
+	service := NewService(repo, v)
 
 	id, err := service.SaveTx("test")
 	mock.ExpectCommit()
@@ -114,7 +116,8 @@ func TestServiceSaveTxBeginTxError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	v := validator.New()
+	service := NewService(repo, v)
 
 	mock.ExpectBegin().WillReturnError(fmt.Errorf("tx begin error"))
 
@@ -133,7 +136,8 @@ func TestServiceSaveTxFindByNameError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	v := validator.New()
+	service := NewService(repo, v)
 
 	mock.ExpectBegin()
 
@@ -158,7 +162,8 @@ func TestServiceSaveTxEmployeeAlreadyExists(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	v := validator.New()
+	service := NewService(repo, v)
 
 	mock.ExpectBegin()
 
@@ -183,7 +188,8 @@ func TestServiceSaveTxSaveError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	v := validator.New()
+	service := NewService(repo, v)
 
 	mock.ExpectBegin()
 
@@ -248,10 +254,11 @@ func TestFindAllByIds(t *testing.T) {
 func TestServices(t *testing.T) {
 
 	var a = assert.New(t)
+	var val = validator.New()
 
 	t.Run("should return found employee by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{
 			Id:        1,
 			Name:      "John Doe",
@@ -270,7 +277,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return an error when not found by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{}
 		var err = errors.New("user not found")
 		var want = fmt.Errorf("error finding employee with id 1: %w", err)
@@ -286,7 +293,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return all found employees by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entityes = []Entity{
 			{
 				Id:        1,
@@ -313,7 +320,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return all employees", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entityes = []Entity{
 			{
 				Id:        1,
@@ -340,7 +347,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should delete all employees by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 
 		repo.On("DeleteAllByIds", []int64{1, 2}).Return(nil)
 		err := svc.DeleteAllByIds([]int64{1, 2})
@@ -351,7 +358,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return an error when not found by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = []Entity{{
 			Id:        1,
 			Name:      "User",
@@ -372,7 +379,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should delete by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 
 		repo.On("Delete", valueId).Return(nil)
 		err := svc.Delete(1)
@@ -383,7 +390,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return saved employee", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		roleName := "Разработчик"
 		var entity = Entity{
 			Name:      "User",
@@ -401,7 +408,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return error while save employee", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{
 			Name: "",
 		}

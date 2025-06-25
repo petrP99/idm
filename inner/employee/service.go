@@ -6,17 +6,23 @@ import (
 )
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
 type ServiceStub struct {
 	repo StubRepo
 }
 
-func NewService(repo Repo) *Service {
+func NewService(repo Repo, validator Validator) *Service {
 	return &Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
+}
+
+type Validator interface {
+	Validate(request any) error
 }
 
 type StubRepo interface {
