@@ -61,11 +61,8 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) {
 	var newEmployeeId, err = c.employeeService.CreateEmployee(request)
 	if err != nil {
 		switch {
-		// если сервис возвращает ошибку RequestValidationError или AlreadyExistsError,
-		// то мы возвращаем ответ с кодом 400 (BadRequest)
 		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
 			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
-		// если сервис возвращает другую ошибку, то мы возвращаем ответ с кодом 500 (InternalServerError)
 		default:
 			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
 		}
