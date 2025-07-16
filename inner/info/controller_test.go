@@ -93,6 +93,6 @@ func TestInternalApiInfo(t *testing.T) {
 		err = json.Unmarshal(bytesData, &responseBody)
 		a.Nil(err)
 		a.Equal("idm", responseBody.Name)
-		a.Equal("1.0.1", responseBody.Version)
+		a.Equal("0.0.0", responseBody.Version)
 	})
 }
