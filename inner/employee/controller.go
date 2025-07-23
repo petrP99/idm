@@ -18,6 +18,7 @@ type Controller struct {
 type Svc interface {
 	FindById(id int64) (Response, error)
 	CreateEmployee(request CreateRequest) (int64, error)
+	FindAll() ([]Response, error)
 }
 
 func NewController(server *web.Server, employeeService Svc) *Controller {
@@ -33,6 +34,7 @@ func (c *Controller) RegisterRoutes() {
 
 	// полный маршрут получится "/api/v1/employees"
 	c.server.GroupApiV1.Post("/employees", c.CreateEmployee)
+	c.server.GroupApiV1.Get("/employees", c.FindAll)
 }
 
 // функция-хендлер, которая будет вызываться при POST запросе по маршруту "/api/v1/employees"
@@ -71,6 +73,26 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) {
 
 	// функция OkResponse() формирует и направляет ответ в случае успеха
 	err = common.OkResponse(ctx, newEmployeeId)
+	if err != nil {
+		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning created employee id")
+		return
+	}
+}
+
+func (c *Controller) FindAll(ctx *fiber.Ctx) {
+	_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "internal validation error")
+
+	all, err := c.employeeService.FindAll()
+	if err != nil {
+		switch {
+		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
+			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
+		default:
+			_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	err = common.OkResponse(ctx, all)
 	if err != nil {
 		_ = common.ErrResponse(ctx, fiber.StatusInternalServerError, "error returning created employee id")
 		return
