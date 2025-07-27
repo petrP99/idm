@@ -23,6 +23,11 @@ func (svc *MockService) FindById(id int64) (Response, error) {
 	return args.Get(0).(Response), args.Error(1)
 }
 
+func (svc *MockService) FindAll() ([]Response, error) {
+	args := svc.Called()
+	return args.Get(0).([]Response), args.Error(1)
+}
+
 func (svc *MockService) CreateEmployee(request CreateRequest) (int64, error) {
 	args := svc.Called(request)
 	return args.Get(0).(int64), args.Error(1)

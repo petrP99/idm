@@ -7,6 +7,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"idm/inner/validator"
 	"testing"
 	"time"
 )
@@ -62,6 +63,8 @@ func (m *MockRepo) SaveTx(tx *sqlx.Tx, entity Entity) (int64, error) {
 	return args.Get(0).(int64), args.Error(1)
 }
 
+var val = validator.New()
+
 func TestServiceSaveTxSuccess(t *testing.T) {
 	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
 	if err != nil {
@@ -87,7 +90,7 @@ func TestServiceSaveTxSuccess(t *testing.T) {
 		WillReturnRows(insertRows)
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	service := NewService(repo, val)
 
 	id, err := service.SaveTx("test")
 	mock.ExpectCommit()
@@ -105,7 +108,7 @@ func TestServiceSaveTxBeginTxError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	service := NewService(repo, val)
 
 	mock.ExpectBegin().WillReturnError(fmt.Errorf("tx begin error"))
 
@@ -124,7 +127,7 @@ func TestServiceSaveTxFindByNameError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	service := NewService(repo, val)
 
 	mock.ExpectBegin()
 
@@ -149,7 +152,7 @@ func TestServiceSaveTxroleAlreadyExists(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	service := NewService(repo, val)
 
 	mock.ExpectBegin()
 
@@ -174,7 +177,7 @@ func TestServiceSaveTxSaveError(t *testing.T) {
 	sqlxDB := sqlx.NewDb(db, "postgres")
 
 	repo := &Repository{db: sqlxDB}
-	service := NewService(repo)
+	service := NewService(repo, val)
 
 	mock.ExpectBegin()
 
@@ -198,7 +201,7 @@ func TestServices(t *testing.T) {
 	var a = assert.New(t)
 	t.Run("should return found role by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{
 			Id:        1,
 			Name:      "Разработчик",
@@ -217,7 +220,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return an error when not found by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{}
 		var err = errors.New("user not found")
 		var want = fmt.Errorf("error finding role with id 1: %w", err)
@@ -233,7 +236,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return all found roles by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entityes = []Entity{
 			{
 				Id:        1,
@@ -260,7 +263,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return an error when not found by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = []Entity{{
 			Id:        1,
 			Name:      "Разработчик",
@@ -281,7 +284,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return all roles", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entityes = []Entity{
 			{
 				Name:      "Разработчик",
@@ -306,7 +309,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should delete all roles by ids", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 
 		repo.On("DeleteAllByIds", []int64{1, 2}).Return(nil)
 		err := svc.DeleteAllByIds([]int64{1, 2})
@@ -317,7 +320,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should delete by id", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 
 		repo.On("Delete", valueId).Return(nil)
 		err := svc.Delete(1)
@@ -328,7 +331,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return saved role", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{
 			Name:      "User",
 			CreatedAt: time.Now(),
@@ -345,7 +348,7 @@ func TestServices(t *testing.T) {
 
 	t.Run("should return error while save role", func(t *testing.T) {
 		var repo = new(MockRepo)
-		var svc = NewService(repo)
+		var svc = NewService(repo, val)
 		var entity = Entity{
 			Name: "",
 		}

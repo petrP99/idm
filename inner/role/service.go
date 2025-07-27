@@ -2,17 +2,25 @@ package role
 
 import (
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
+	"idm/inner/common"
 )
 
 type Service struct {
-	repo Repo
+	repo      Repo
+	validator Validator
 }
 
-func NewService(repo Repo) *Service {
+func NewService(repo Repo, validator Validator) *Service {
 	return &Service{
-		repo: repo,
+		repo:      repo,
+		validator: validator,
 	}
+}
+
+type Validator interface {
+	Validate(request any) error
 }
 
 type Repo interface {
@@ -111,4 +119,14 @@ func (service *Service) SaveTx(name string) (int64, error) {
 		err = fmt.Errorf("error creating role with name: %s %v", name, err)
 	}
 	return newRoleId, err
+}
+
+func (service *Service) CreateRole(request CreateRequest) (int64, error) {
+	if err := service.validator.Validate(request); err != nil {
+		return 0, &common.RequestValidationError{
+			FieldErrors: common.MapValidationErrors(err.(validator.ValidationErrors)).FieldErrors,
+		}
+	}
+	entity := request.ToEntity()
+	return service.SaveTx(entity.Name)
 }

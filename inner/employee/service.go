@@ -2,7 +2,9 @@ package employee
 
 import (
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/jmoiron/sqlx"
+	"idm/inner/common"
 )
 
 type Service struct {
@@ -125,4 +127,14 @@ func (service *Service) SaveTx(name string) (int64, error) {
 		err = fmt.Errorf("error creating employee with name: %s %v", name, err)
 	}
 	return newEmployeeId, err
+}
+
+func (service *Service) CreateEmployee(request CreateRequest) (int64, error) {
+	if err := service.validator.Validate(request); err != nil {
+		return 0, &common.RequestValidationError{
+			FieldErrors: common.MapValidationErrors(err.(validator.ValidationErrors)).FieldErrors,
+		}
+	}
+	entity := request.ToEntity()
+	return service.SaveTx(entity.Name)
 }
