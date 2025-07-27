@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/database"
 	"idm/inner/employee"
@@ -18,14 +18,16 @@ import (
 )
 
 var cfg = common.GetConfig(".env")
+var logger = common.NewLogger(cfg)
 
 func main() {
 	// создаём подключение к базе данных
 	var dbWithCfg = database.ConnectDbWithCfg(cfg)
+	defer func() { _ = logger.Sync() }()
 	// закрываем соединение с базой данных после выхода из функции main
 	defer func() {
 		if err := dbWithCfg.Close(); err != nil {
-			fmt.Printf("error closing db: %v", err)
+			logger.Error("error closing db: %s", zap.Error(err))
 		}
 	}()
 
@@ -33,7 +35,7 @@ func main() {
 	go func() {
 		var err = server.App.Listen(":8080")
 		if err != nil {
-			panic(fmt.Sprintf("http server error: %s", err))
+			logger.Panic("http server error: %s", zap.Error(err))
 		}
 	}()
 
@@ -44,8 +46,7 @@ func main() {
 	go gracefulShutdown(server, wg)
 	// Ожидаем сигнал от горутины gracefulShutdown, что сервер завершил работу
 	wg.Wait()
-	fmt.Println("Graceful shutdown complete.")
-
+	logger.Info("graceful shutdown complete")
 }
 
 // Функция "элегантного" завершения работы сервера по сигналу от операционной системы
@@ -57,15 +58,15 @@ func gracefulShutdown(server *web.Server, wg *sync.WaitGroup) {
 	defer stop()
 	// Слушаем сигнал прерывания от операционной системы
 	<-ctx.Done()
-	fmt.Println("shutting down gracefully, press Ctrl+C again to force")
+	logger.Info("shutting down gracefully")
 	// Контекст используется для информирования веб-сервера о том,
 	// что у него есть 5 секунд на выполнение запроса, который он обрабатывает в данный момент
 	_, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.App.Shutdown(); err != nil {
-		fmt.Printf("Server forced to shutdown with error: %v\n", err)
+		logger.Error("Server forced to shutdown with error", zap.Error(err))
 	}
-	fmt.Println("Server exiting")
+	logger.Info("Server exiting")
 }
 
 func build(db *sqlx.DB) *web.Server {
@@ -73,7 +74,7 @@ func build(db *sqlx.DB) *web.Server {
 	validate := validator.New()
 	employeeRepo := employee.NewEmployeeRepository(db)
 	employeeService := employee.NewService(employeeRepo, validate)
-	employeeController := employee.NewController(server, employeeService)
+	employeeController := employee.NewController(server, employeeService, logger)
 	employeeController.RegisterRoutes()
 
 	connectionService := info.NewConnectionService()

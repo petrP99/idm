@@ -40,9 +40,14 @@ func getTestRequestBody(req CreateRequest) *bytes.Buffer {
 
 func TestController(t *testing.T) {
 	roleId := int64(2)
+	var cfg = common.Config{
+		LogDevelopMode: true,
+		LogLevel:       "debug",
+	}
 	mockService := new(MockService)
+	logger := common.NewLogger(cfg)
 	server := web.NewServer()
-	controller := NewController(server, mockService)
+	controller := NewController(server, mockService, logger)
 	controller.RegisterRoutes()
 
 	t.Run("CreateSuccess", func(t *testing.T) {
