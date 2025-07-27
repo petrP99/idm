@@ -3,6 +3,7 @@ package employee
 import (
 	"errors"
 	"github.com/gofiber/fiber"
+	"go.uber.org/zap"
 	"idm/inner/common"
 	"idm/inner/validator"
 	"idm/inner/web"
@@ -12,6 +13,7 @@ type Controller struct {
 	server          *web.Server
 	employeeService Svc
 	validate        *validator.Validator
+	logger          *common.Logger
 }
 
 // интерфейс сервиса employee.Service
@@ -21,11 +23,12 @@ type Svc interface {
 	FindAll() ([]Response, error)
 }
 
-func NewController(server *web.Server, employeeService Svc) *Controller {
+func NewController(server *web.Server, employeeService Svc, logger *common.Logger) *Controller {
 	return &Controller{
 		server:          server,
 		employeeService: employeeService,
 		validate:        validator.New(),
+		logger:          logger,
 	}
 }
 
@@ -62,6 +65,7 @@ func (c *Controller) CreateEmployee(ctx *fiber.Ctx) {
 	// вызываем метод CreateEmployee сервиса employee.Service
 	var newEmployeeId, err = c.employeeService.CreateEmployee(request)
 	if err != nil {
+		c.logger.Error("create employee", zap.Error(err))
 		switch {
 		case errors.As(err, &common.RequestValidationError{}) || errors.As(err, &common.AlreadyExistsError{}):
 			_ = common.ErrResponse(ctx, fiber.StatusBadRequest, err.Error())
